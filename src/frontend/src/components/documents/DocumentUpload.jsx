@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Button, message, Form, Select, Input } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-// import { uploadDocument, addDocumentUrl } from '../../services/api'; // Uncomment
+import { uploadDocument, addDocumentUrl } from '../../services/api';
 
 const { Dragger } = Upload;
 const { Option } = Select;
@@ -23,13 +23,14 @@ const DocumentUpload = ({ productId, onUploadComplete }) => {
         }
         setUploading(true);
         try {
-            // await addDocumentUrl(productId, url, docType, label); // Uncomment
-            console.log(`Adding URL for product ${productId}:`, { url, docType, label }); // Placeholder
-            message.success('URL added successfully.');
-            onUploadComplete(); // Callback
-            setUrl(''); setLabel(''); // Reset form fields
+            await addDocumentUrl(productId, url, docType, label || undefined); // Pass undefined if label is empty
+            message.success(`URL "${label || url}" added successfully.`);
+            onUploadComplete(); // Callback to refresh parent component (e.g., product details)
+            setUrl('');
+            setLabel('');
+            // setDocType('image'); // Optionally reset docType
         } catch (error) {
-            message.error('Failed to add URL.');
+            message.error(error.message || 'Failed to add URL.');
             console.error('URL add error:', error);
         } finally {
             setUploading(false);
@@ -39,20 +40,28 @@ const DocumentUpload = ({ productId, onUploadComplete }) => {
             message.error('Please select a file to upload.');
             return;
         }
-        setUploading(true);
-        // const formData = new FormData(); // If API expects FormData
-        // formData.append('file', fileList[0]);
-        // formData.append('doc_type', docType);
-        // if (label) formData.append('label', label);
+        const file = fileList[0].originFileObj; // Get the actual File object
+        if (!file) {
+            message.error('File object is not available. Please re-select the file.');
+            return;
+        }
 
+        setUploading(true);
         try {
-            // await uploadDocument(productId, fileList[0], docType, label); // Pass raw file object
-            console.log(`Uploading file for product ${productId}:`, { fileName: fileList[0].name, docType, label }); // Placeholder
-            message.success(`${fileList[0].name} file uploaded successfully.`);
+            await uploadDocument(productId, file, docType, label || undefined); // Pass raw file object, undefined if label empty
+
+            if (docType === 'excel') {
+                message.info(`File "${file.name}" uploaded. Excel content will be processed in the background.`);
+            } else {
+                message.success(`File "${file.name}" uploaded successfully.`);
+            }
+
             onUploadComplete(); // Callback
-            setFileList([]); setLabel(''); // Reset form fields
+            setFileList([]);
+            setLabel('');
+            // setDocType('image'); // Optionally reset docType
         } catch (error) {
-            message.error(`${fileList[0].name} file upload failed.`);
+            message.error(error.message || `${file.name} file upload failed.`);
             console.error('Upload error:', error);
         } finally {
             setUploading(false);

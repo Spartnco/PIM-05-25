@@ -1,6 +1,6 @@
 import React from 'react';
-import { List, Button, Image, Typography, Tag, Popconfirm } from 'antd';
-// import { deleteDocument } from '../../services/api'; // Uncomment
+import { List, Button, Image, Typography, Tag, Popconfirm, message } from 'antd'; // Added message
+import { deleteDocument } from '../../services/api';
 
 const { Text, Link } = Typography;
 const API_BASE_URL = 'http://localhost:8000'; // Same as in api.js
@@ -9,18 +9,24 @@ const DocumentList = ({ documents, productId, onRefresh }) => {
 
   const handleDelete = async (docId) => {
     try {
-      // await deleteDocument(docId); // Uncomment
-      console.log(`Deleting document ${docId} for product ${productId}`); // Placeholder
-      if (onRefresh) onRefresh();
+      await deleteDocument(docId);
+      message.success('Document deleted successfully');
+      if (onRefresh) {
+        onRefresh(); // Callback to refresh the product details in App.jsx
+      }
     } catch (error) {
       console.error('Failed to delete document:', error);
-      // Add user notification
+      message.error(`Failed to delete document: ${error.message}`);
     }
   };
 
   const getFileUrl = (pathOrUrl) => {
+    if (!pathOrUrl) return ''; // Handle null or undefined path
     if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
-        return pathOrUrl;
+      return pathOrUrl;
+    }
+    if (pathOrUrl.startsWith('data:image')) { // Check for data URIs
+      return pathOrUrl;
     }
     // Assuming pathOrUrl from backend is like "media/product_X/type/filename.ext"
     // and FastAPI serves /media route
