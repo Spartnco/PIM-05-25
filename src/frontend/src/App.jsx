@@ -4,70 +4,18 @@ import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
 import DocumentUpload from './components/documents/DocumentUpload';
 import DocumentList from './components/documents/DocumentList';
-// import { fetchProducts, fetchProductById, createProduct, updateProduct, deleteProduct } from './services/api'; // Placeholder for actual API calls
+import { fetchProducts, fetchProductById, createProduct, updateProduct, deleteProduct } from './services/api'; // Removed deleteDocument
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography; // Added Text
 
-// Placeholder API functions (replace with actual calls from services/api.js)
-const mockApi = {
-  fetchProducts: async (searchTerm) => {
-    console.log('API: Fetching products', searchTerm);
-    await new Promise(r => setTimeout(r, 500));
-    let data = [
-      { id: 1, name: 'Laptop Pro X', ref: 'LPX-001', description: 'High performance laptop for professionals.', documents: [{id:101, type:'pdf', path_or_url:'media/product_1/pdf/specsheet.pdf', label:'Specsheet.pdf'}, {id:102, type:'image', path_or_url:'https://via.placeholder.com/150/0000FF/808080?Text=LaptopProX', label:'Laptop Image'}] },
-      { id: 2, name: 'Eco Smartphone Y', ref: 'ESY-002', description: 'Eco-friendly smartphone with long battery life.', documents: [] },
-      { id: 3, name: 'Wireless Headphones Z', ref: 'WHZ-003', description: 'Noise-cancelling wireless headphones.', documents: [{id:103, type:'image', path_or_url:'https://via.placeholder.com/150/FF0000/FFFFFF?Text=HeadphonesZ', label:'Headphones Image'}] },
-    ];
-    if (searchTerm) {
-      data = data.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.ref.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    return data;
-  },
-  fetchProductById: async (id) => {
-    console.log('API: Fetching product by ID', id);
-    await new Promise(r => setTimeout(r, 300));
-    const products = await mockApi.fetchProducts(); // get all to find one
-    let product = products.find(p => p.id === id);
-    if (product) { // Create a copy to avoid modifying the "global" mock data directly
-        product = JSON.parse(JSON.stringify(product));
-    }
-
-    // Simulate fetching more complete document details if needed
-    if (product && (!product.documents || product.documents.length === 0)) {
-        if (id === 1 && product.documents.length === 0) { // Check if documents are actually missing
-             product.documents = [
-                {id:101, type:'pdf', path_or_url:'media/product_1/pdf/specsheet.pdf', label:'Specsheet.pdf'},
-                {id:102, type:'image', path_or_url:'https://via.placeholder.com/150/0000FF/808080?Text=LaptopProX', label:'Laptop Image'}
-            ];
-        } else if (id === 2 && product.documents.length === 0) {
-            product.documents = [{id:201, type:'excel', path_or_url:'media/product_2/excel/compat_list.xlsx', label:'Compatibility List'}];
-        }
-    }
-    return product || null;
-  },
-  createProduct: async (data) => {
-    console.log('API: Creating product', data);
-    await new Promise(r => setTimeout(r, 300));
-    const newProduct = { ...data, id: Date.now(), documents: [] };
-    // This part is tricky for mock: ideally add to the 'products' array used by fetchProducts
-    message.info("Mock create: Product list won't update globally without more complex mock state management.");
-    return newProduct;
-  },
-  updateProduct: async (id, data) => {
-    console.log('API: Updating product', id, data);
-    await new Promise(r => setTimeout(r, 300));
-    message.info("Mock update: Product list won't update globally without more complex mock state management.");
-    return { ...data, id };
-  },
-};
-
-
 const App = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [submittingForm, setSubmittingForm] = useState(false); // For form loading state
   const [isProductModalVisible, setIsProductModalVisible] = useState(false);
   const [isDocumentUploadModalVisible, setIsDocumentUploadModalVisible] = useState(false);
   const [productForDocumentUpload, setProductForDocumentUpload] = useState(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false); // State for new details modal
 
   const [detailedProductView, setDetailedProductView] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -79,12 +27,12 @@ const App = () => {
 
   const refreshProducts = async (searchTerm = currentSearchTerm) => {
     setLoadingProducts(true);
-    setCurrentSearchTerm(searchTerm);
+    setCurrentSearchTerm(searchTerm); // Keep track of current search term
     try {
-      const data = await mockApi.fetchProducts(searchTerm);
+      const data = await fetchProducts(searchTerm);
       setProducts(data);
     } catch (error) {
-      message.error("Failed to load products.");
+      message.error(error.message || "Failed to load products.");
       console.error("Failed to load products:", error);
     } finally {
       setLoadingProducts(false);
@@ -93,7 +41,7 @@ const App = () => {
 
   useEffect(() => {
     refreshProducts();
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
 
   const handleAddProduct = () => {
@@ -112,56 +60,67 @@ const App = () => {
   };
 
   const handleProductFormSubmit = async (formData) => {
-    setLoadingProducts(true); // Indicate loading state
+    setSubmittingForm(true);
     try {
+      let updatedOrNewProduct;
       if (selectedProduct && selectedProduct.id) {
-        await mockApi.updateProduct(selectedProduct.id, formData);
+        updatedOrNewProduct = await updateProduct(selectedProduct.id, formData);
         message.success('Product updated successfully!');
       } else {
-        await mockApi.createProduct(formData);
+        updatedOrNewProduct = await createProduct(formData);
         message.success('Product created successfully!');
       }
       setIsProductModalVisible(false);
       setSelectedProduct(null);
-      await refreshProducts();
+      await refreshProducts(currentSearchTerm); // Refresh with the current search term
 
-      // If the edited/created product was being viewed, refresh its details
-      // This logic might need adjustment based on how IDs are handled post-creation
-      if (selectedProduct && detailedProductView && selectedProduct.id === detailedProductView.id) {
-        handleSelectProductForDetails({ ...detailedProductView, ...formData });
-      } else if (!selectedProduct) { // If it was a new product
-        // Potentially select the new product for view, if ID is available
+      // If the edited/created product was being viewed, or if it's a new product, refresh its details
+      // For a new product, updatedOrNewProduct contains the ID from the backend.
+      if (updatedOrNewProduct && updatedOrNewProduct.id) {
+        if (detailedProductView && detailedProductView.id === updatedOrNewProduct.id) {
+          handleSelectProductForDetails(updatedOrNewProduct); // Refresh details view
+        } else if (!selectedProduct) { // If it was a new product, potentially make it the detailed view
+          // handleSelectProductForDetails(updatedOrNewProduct); // Or simply let user click from list
+        }
       }
-
     } catch (error) {
-      message.error('Failed to save product.');
+      message.error(error.message || 'Failed to save product.');
       console.error("Product form submit error:", error);
     } finally {
-        setLoadingProducts(false);
+      setSubmittingForm(false);
     }
   };
 
   const handleSelectProductForDetails = async (product) => {
-    if (detailedProductView && detailedProductView.id === product.id && !loadingDetails) {
-         // Optional: If clicking the same product again, maybe force refresh or do nothing
-         // For now, let's always refresh if selected.
-    }
+    // Optional: If clicking the same product again, and it's already loaded, maybe do nothing or force refresh.
+    // if (detailedProductView && detailedProductView.id === product.id && !loadingDetails) {
+    //   return; // Already showing this one
+    // }
     setLoadingDetails(true);
-    // setDetailedProductView(null); // Clear previous while loading new, or keep stale
+    // If modal isn't open yet, clear previous to avoid showing wrong data briefly
+    // If modal is already open (e.g. clicking refresh inside), keep current data until new data loads or error.
+    if (!isDetailModalVisible) {
+        setDetailedProductView(null);
+    }
+
     try {
-        const detailedData = await mockApi.fetchProductById(product.id);
+        const detailedData = await fetchProductById(product.id);
         if (detailedData) {
             setDetailedProductView(detailedData);
+            // setLoadingDetails(false) will be set before showing modal content or after error
+            setIsDetailModalVisible(true); // Open the modal
         } else {
-            message.error("Could not load product details for ID: " + product.id);
-            setDetailedProductView(null); // Clear if not found
+            message.error(`Could not load product details for ID: ${product.id}. Product not found.`);
+            setDetailedProductView(null);
+            setIsDetailModalVisible(false); // Ensure modal doesn't stay open/open empty
         }
     } catch (error) {
-        message.error("Error loading product details.");
+        message.error(error.message || "Error loading product details.");
         console.error("Failed to fetch product details:", error);
         setDetailedProductView(null);
+        setIsDetailModalVisible(false);
     } finally {
-        setLoadingDetails(false);
+        setLoadingDetails(false); // Set loading false after try/catch completes
     }
   };
 
@@ -173,14 +132,21 @@ const App = () => {
   const handleDocumentUploadComplete = async () => {
     setIsDocumentUploadModalVisible(false);
     if (productForDocumentUpload) {
-      message.success('Document operation successful. Refreshing details...');
-      // Re-fetch the product to get updated document list
-      await handleSelectProductForDetails(productForDocumentUpload);
+      message.success('Document operation successful. Refreshing product details...');
+      try {
+        // Re-fetch the product to get updated document list
+        await handleSelectProductForDetails(productForDocumentUpload);
+        // Also refresh the main product list if a document change might alter list-visible info (e.g. doc count)
+        // For now, only refreshing details as per original logic.
+      } catch (error) {
+        message.error(error.message || "Failed to refresh product details after document operation.");
+      }
     }
     setProductForDocumentUpload(null);
+    // Consider if refreshProducts() is also needed if document changes affect summary in list
   };
 
-  const handleDeleteProduct = async (productId) => {
+  const handleDeleteProduct = (productId) => { // No longer async here, onOk is.
     Modal.confirm({
         title: 'Are you sure you want to delete this product?',
         content: 'This action cannot be undone.',
@@ -189,21 +155,69 @@ const App = () => {
         cancelText: 'No',
         onOk: async () => {
             try {
-                // await mockApi.deleteProduct(productId); // Replace with actual API
-                console.log("Mock Deleting product ID:", productId);
-                message.success(`Product ${productId} deleted (mock).`);
-                await refreshProducts(); // Refresh list
+                await deleteProduct(productId);
+                message.success(`Product ${productId} deleted successfully.`);
+                await refreshProducts(currentSearchTerm); // Refresh list with current search term
                 if (detailedProductView && detailedProductView.id === productId) {
-                    setDetailedProductView(null); // Clear details view if current product deleted
+                    setDetailedProductView(null);
+                    setIsDetailModalVisible(false); // Close detail modal if deleted product was viewed
                 }
             } catch (error) {
-                message.error('Failed to delete product.');
+                message.error(error.message || 'Failed to delete product.');
                 console.error("Delete product error:", error);
             }
         }
     });
   };
 
+  // JSX for the new Product Details Modal
+  const renderProductDetailModal = () => {
+    if (!detailedProductView && !loadingDetails) return null; // Don't render if no product selected (and not loading one)
+
+    // If loading, but we have a detailedProductView (e.g. refreshing an already open modal), show its title.
+    // If loading and no detailedProductView (e.g. first click from list), title will be generic.
+    const modalTitle = detailedProductView?.name ? `Details for: ${detailedProductView.name}` : 'Product Details';
+
+    return (
+        <Modal
+            title={modalTitle}
+            open={isDetailModalVisible}
+            onCancel={() => {
+                setIsDetailModalVisible(false);
+                setDetailedProductView(null); // Clear data when closing
+            }}
+            footer={null}
+            width={800}
+            destroyOnClose
+        >
+            {loadingDetails ? (
+                <div style={{ textAlign: 'center', padding: '50px 0' }}><Spin size="large" /></div>
+            ) : detailedProductView ? ( // Ensure detailedProductView is not null before trying to render its content
+                <>
+                    <Title level={4} style={{ marginBottom: '4px' }}>{detailedProductView.name}</Title>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>Ref: {detailedProductView.ref}</Text>
+                    <p>{detailedProductView.description}</p>
+                    <Button
+                        type="dashed"
+                        onClick={() => {
+                            openDocumentUploadModal(detailedProductView);
+                        }}
+                        style={{ marginBottom: '16px' }}
+                    >
+                        Manage Documents
+                    </Button>
+                    <DocumentList
+                        documents={detailedProductView.documents || []}
+                        productId={detailedProductView.id}
+                        onRefresh={() => handleSelectProductForDetails(detailedProductView)}
+                    />
+                </>
+            ) : (
+                 <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>No details available.</div>
+            )}
+        </Modal>
+    );
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -214,7 +228,7 @@ const App = () => {
       </Header>
       <Content style={{ padding: '24px', marginTop: 64, background: '#f0f2f5' }}>
         <Row gutter={[16, 16]}>
-          <Col xs={24} lg={12}>
+          <Col xs={24} lg={24}> {/* Changed lg span to 24 */}
             <Card title="Product Catalog" bordered={false} style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
               <ProductList
                 products={products}
@@ -222,49 +236,26 @@ const App = () => {
                 onEditProduct={handleEditProduct}
                 onAddProduct={handleAddProduct}
                 onSelectProduct={handleSelectProductForDetails}
-                onDeleteProduct={handleDeleteProduct} // Pass delete handler
-                onSearch={refreshProducts} // Pass search handler (term comes from ProductList's input)
+                onDeleteProduct={handleDeleteProduct}
+                onSearch={refreshProducts}
               />
             </Card>
           </Col>
-          <Col xs={24} lg={12}>
-            <Card title="Product Details" bordered={false} style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-              {loadingDetails && <div style={{textAlign: 'center', padding: '20px'}}><Spin size="large" /></div>}
-              {!loadingDetails && !detailedProductView && (
-                <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>Select a product to view details.</div>
-              )}
-              {!loadingDetails && detailedProductView && (
-                <div>
-                  <Title level={4} style={{marginBottom: '4px'}}>{detailedProductView.name}</Title>
-                  <Text type="secondary" style={{display: 'block', marginBottom: '8px'}}>Ref: {detailedProductView.ref}</Text>
-                  <p>{detailedProductView.description}</p>
-                  <Button
-                    type="dashed" // Changed type for visual distinction
-                    onClick={() => openDocumentUploadModal(detailedProductView)}
-                    style={{marginBottom: '16px'}}
-                  >
-                    Manage Documents
-                  </Button>
-                  <DocumentList
-                    documents={detailedProductView.documents}
-                    productId={detailedProductView.id}
-                    onRefresh={() => handleSelectProductForDetails(detailedProductView)}
-                  />
-                </div>
-              )}
-            </Card>
-          </Col>
+          {/* The Col for Product Details Card has been removed */}
         </Row>
 
+        {/* Product Form Modal (existing) */}
         {isProductModalVisible && (
             <ProductForm
                 visible={isProductModalVisible}
                 onCancel={handleProductFormCancel}
                 onSubmit={handleProductFormSubmit}
                 initialData={selectedProduct}
+                submitting={submittingForm}
             />
         )}
 
+        {/* Document Upload Modal (existing) */}
         {isDocumentUploadModalVisible && productForDocumentUpload && (
             <Modal
                 title={`Manage Documents for: ${productForDocumentUpload.name}`}
@@ -275,7 +266,7 @@ const App = () => {
                 }}
                 footer={null}
                 width={600}
-                destroyOnClose // Important to reset state of DocumentUpload form
+                destroyOnClose
             >
                 <DocumentUpload
                     productId={productForDocumentUpload.id}
@@ -283,6 +274,9 @@ const App = () => {
                 />
             </Modal>
         )}
+
+        {/* Render the new Product Details Modal */}
+        {renderProductDetailModal()}
 
       </Content>
       <Footer style={{ textAlign: 'center', background: '#001529', color: 'rgba(255,255,255,0.65)', padding: '10px 50px' }}>
