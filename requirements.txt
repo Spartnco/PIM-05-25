@@ -1,6 +1,6 @@
-fastapi
+fastapi==0.108.0
 uvicorn[standard]
-tortoise-orm
+tortoise-orm==0.25.0
 aiofiles
 openpyxl
 Pillow
@@ -13,3 +13,4 @@ pytest
 pytest-asyncio
 httpx
 pytest-cov
+
