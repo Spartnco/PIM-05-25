@@ -199,4 +199,3 @@ async def import_products_from_file_content(file_content: bytes, filename: str) 
 
     return {"created": created_count, "updated": updated_count, "skipped_due_to_error_or_no_change": skipped_count}
 
-EOF
