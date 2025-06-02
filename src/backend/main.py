@@ -17,13 +17,14 @@ from tortoise.expressions import Q # Make sure Q is imported for search queries
 
 # Import models and Pydantic schemas
 from src.backend.models import Document, Product, Document_Pydantic, DocumentIn_Pydantic, Product_Pydantic, ProductIn_Pydantic
-from fastapi import FastAPI
-
 app = FastAPI()
 
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
+# Define base directory for media files
+BASE_MEDIA_DIR = "media"
+os.makedirs(BASE_MEDIA_DIR, exist_ok=True) # Ensure media directory exists
 # Define base directory for media files
 BASE_MEDIA_DIR = "media"
 os.makedirs(BASE_MEDIA_DIR, exist_ok=True) # Ensure media directory exists
