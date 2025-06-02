@@ -1,0 +1,37 @@
+Product Name,Reference,Description
+Test Product 1 from CSV,REF001CSV,This is a description for product 1.
+Test Product 2 from CSV,REF002CSV,Another description here.
+Test Product 3 with only name,,
+Test Product 4 from CSV,REF004CSV,Description for product 4.
+Test Product 5 from CSV,REF005CSV,Yet another description.
+"Product with comma, in name","REF,COMMA","Description, with comma"
+Product with quote",REFQUOTE","Description with quote""
+,,,,
+Test Product 6 with empty fields,REF006CSV,,
+,REF007CSV,Orphaned Ref and Desc
+Test Product 7 from CSV (duplicate name),REF001CSV,This will update previous P1 if name matches
+Test Product 1 from CSV,REF001CSV_UPDATED,This description should update the first product 1.
+Test Product 8,,Only Name and Empty Ref/Desc
+Test Product 9,REF009,
+Test Product 10,,Description only for P10
+,REFNO mismatched,
+Test Product 11,REF011CSV,Description for product 11.
+Test Product 12,REF012CSV,Description for product 12.
+Test Product 13,REF013CSV,Description for product 13.
+Test Product 14,REF014CSV,Description for product 14.
+Test Product 15,REF015CSV,Description for product 15.
+Test Product 16,REF016CSV,Description for product 16.
+Test Product 17,REF017CSV,Description for product 17.
+Test Product 18,REF018CSV,Description for product 18.
+Test Product 19,REF019CSV,Description for product 19.
+Test Product 20,REF020CSV,Description for product 20.
+Test Product 21,REF021CSV,Description for product 21.
+Test Product 22,REF022CSV,Description for product 22.
+Test Product 23,REF023CSV,Description for product 23.
+Test Product 24,REF024CSV,Description for product 24.
+Test Product 25,REF025CSV,Description for product 25.
+Test Product 26,REF026CSV,Description for product 26.
+Test Product 27,REF027CSV,Description for product 27.
+Test Product 28,REF028CSV,Description for product 28.
+Test Product 29,REF029CSV,Description for product 29.
+Test Product 30,REF030CSV,Description for product 30.
