@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+tortoise-orm
+aiofiles
+openpyxl
+Pillow
+pypdf2
+python-multipart
+# For database driver, e.g., SQLite
+aiosqlite
+# aerich # For migrations, if chosen
+pytest
+pytest-asyncio
+httpx
+pytest-cov
